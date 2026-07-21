@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from fastapi import Request
+from fastapi.templating import Jinja2Templates
 
 from database import get_connection, get_active_loans_with_details
 from services import (
@@ -14,6 +16,7 @@ from exceptions import (
 
 app = FastAPI(title="Library Management System")
 
+templates = Jinja2Templates(directory="templates")
 
 class BookCreate(BaseModel):
     title: str
@@ -127,3 +130,17 @@ def loans_by_member():
 @app.get("/")
 def root():
     return {"message": "Library API running. See /docs"}
+
+    
+@app.get("/ui")
+def web_dashboard(request: Request):
+    with get_connection() as conn:
+        rows = conn.execute("SELECT * FROM books").fetchall()
+        books = [dict(row) for row in rows]
+    
+    # UPDATE THIS LINE WITH EXPLICIT ARGUMENT NAMES:
+    return templates.TemplateResponse(
+        request=request, 
+        name="index.html", 
+        context={"request": request, "books": books}
+    )
